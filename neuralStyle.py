@@ -121,11 +121,7 @@ def main():
         
 if __name__ == '__main__':
     sess = tf.Session()
-    # def load_pre_weights(sess):
-
-#     weights = np.load(PRE_WEIGHTS_FILE, encoding="latin1") #由于在Python2 中的默认编码为ASCII，但是在Python3中的默认编码为UTF-8。
-      # return weights
-#     print(type(weights), weights.shape)
+    load_pre_weights(sess)
 
     main()
     
