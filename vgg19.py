@@ -10,8 +10,9 @@
 import os
 import tensorflow as tf
 import numpy as np
+import time
 
-import tools
+import tools  #自定义
 from tools import WORK_PATH, LIB_PATH
 
 VGG19_MODEL_DATA = None  #模型预训练参数 
@@ -39,53 +40,60 @@ class VGG19():
 
         self.data_dict = VGG19_MODEL_DATA.item()  #预训练数据（字典）
 
-    def model(self, inputs):
-        self.conv1_1 = self.__conv_layer(inputs, 'conv1_1')
-        self.conv1_2 = self.__conv_layer(self.conv1_1, 'conv1_2')
-        self.maxpool1 = self.__maxpool_layer(self.conv1_2, 'maxpool1')
-        
-        self.conv2_1 = self.__conv_layer(self.maxpool1, 'conv2_1')
-        self.conv2_2 = self.__conv_layer(self.conv2_1, 'conv2_2')
-        self.maxpool2 = self.__maxpool_layer(self.conv2_2, 'maxpool2')
-        
-        self.conv3_1 = self.__conv_layer(self.maxpool2, 'conv3_1')
-        self.conv3_2 = self.__conv_layer(self.conv3_1, 'conv3_2')
-        self.conv3_3 = self.__conv_layer(self.conv3_2, 'conv3_3')
-        self.conv3_4 = self.__conv_layer(self.conv3_3, 'conv3_4')
-        self.maxpool3 = self.__maxpool_layer(self.conv3_4, 'maxpool3')        
-        
-        self.conv4_1 = self.__conv_layer(self.maxpool3, 'conv4_1')
-        self.conv4_2 = self.__conv_layer(self.conv4_1, 'conv4_2')
-        self.conv4_3 = self.__conv_layer(self.conv4_2, 'conv4_3')
-        self.conv4_4 = self.__conv_layer(self.conv4_3, 'conv4_4')
-        self.maxpool4 = self.__maxpool_layer(self.conv4_4, 'maxpool4')  
-        
-        self.conv5_1 = self.__conv_layer(self.maxpool4, 'conv5_1')
-        self.conv5_2 = self.__conv_layer(self.conv5_1, 'conv5_2')
-        self.conv5_3 = self.__conv_layer(self.conv5_2, 'conv5_3')
-        self.conv5_4 = self.__conv_layer(self.conv5_3, 'conv5_4')
-        self.maxpool5 = self.__maxpool_layer(self.conv5_4, 'maxpool5') 
-
-        n = self.data_dict['fc6'][0].shape #拉平用的长度
-        self.flatten = tf.reshape(self.maxpool5, [-1,n[0]], 'flatten')
-        
-        self.fc6 = self.__fc_layer(self.flatten, 'fc6', activation='relu')
-        self.fc7 = self.__fc_layer(self.fc6, 'fc7', activation='relu')
-        self.fc8 = self.__fc_layer(self.fc7, 'fc8', activation='softmax')
-        
-        
+    def forward(self, inputs):
+        """前向传播"""
+        start_time = time.time()        # 获取前向传播的开始时间
+        with tf.variable_scope('vgg19'):
+            self.conv1_1 = self.__conv_layer(inputs, 'conv1_1')
+            self.conv1_2 = self.__conv_layer(self.conv1_1, 'conv1_2')
+            self.maxpool1 = self.__maxpool_layer(self.conv1_2, 'maxpool1')
+            
+            self.conv2_1 = self.__conv_layer(self.maxpool1, 'conv2_1')
+            self.conv2_2 = self.__conv_layer(self.conv2_1, 'conv2_2')
+            self.maxpool2 = self.__maxpool_layer(self.conv2_2, 'maxpool2')
+            
+            self.conv3_1 = self.__conv_layer(self.maxpool2, 'conv3_1')
+            self.conv3_2 = self.__conv_layer(self.conv3_1, 'conv3_2')
+            self.conv3_3 = self.__conv_layer(self.conv3_2, 'conv3_3')
+            self.conv3_4 = self.__conv_layer(self.conv3_3, 'conv3_4')
+            self.maxpool3 = self.__maxpool_layer(self.conv3_4, 'maxpool3')        
+            
+            self.conv4_1 = self.__conv_layer(self.maxpool3, 'conv4_1')
+            self.conv4_2 = self.__conv_layer(self.conv4_1, 'conv4_2')
+            self.conv4_3 = self.__conv_layer(self.conv4_2, 'conv4_3')
+            self.conv4_4 = self.__conv_layer(self.conv4_3, 'conv4_4')
+            self.maxpool4 = self.__maxpool_layer(self.conv4_4, 'maxpool4')  
+            
+            self.conv5_1 = self.__conv_layer(self.maxpool4, 'conv5_1')
+            self.conv5_2 = self.__conv_layer(self.conv5_1, 'conv5_2')
+            self.conv5_3 = self.__conv_layer(self.conv5_2, 'conv5_3')
+            self.conv5_4 = self.__conv_layer(self.conv5_3, 'conv5_4')
+            self.maxpool5 = self.__maxpool_layer(self.conv5_4, 'maxpool5') 
+    
+            n = self.data_dict['fc6'][0].shape #拉平用的长度
+            self.flatten = tf.reshape(self.maxpool5, [-1,n[0]], 'flatten')
+            
+            self.fc6 = self.__fc_layer(self.flatten, 'fc6', activation='relu')
+            self.fc7 = self.__fc_layer(self.fc6, 'fc7', activation='relu')
+            self.fc8 = self.__fc_layer(self.fc7, 'fc8', activation='softmax')
+            
+        end_time = time.time()
+        print('vgg forward: time consuming: %f'% (end_time - start_time))
             
     def load_pre_para(self, sess, without=None):
         """
         "加载预训练数据
         "without: 不加载预训练参数的层
         """
+        total = []
         for key in sorted(self.data_dict.keys())[:]:
             if (not without) or (key not in without): 
-                print('覆盖...', key)
-                with tf.variable_scope(key, reuse=True):
+#                 print('覆盖...', key)
+                with tf.variable_scope('vgg19/'+key, reuse=True):
                     for subkey, value in zip(('weights', 'biases'), self.data_dict[key]):
                         sess.run(tf.get_variable(subkey).assign(value))
+                        total.append(key)
+        print(total, '预训练参数覆盖完成.')
 
     def __fc_layer(self, net, name, activation=None, trainable=False):
         with tf.variable_scope(name):
